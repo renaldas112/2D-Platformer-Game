@@ -6,8 +6,11 @@ public class PlayerMovement : MonoBehaviour
 {
         
         private Rigidbody2D rb;
+        private BoxCollider2D collision;
         private SpriteRenderer sprite;
         private Animator anim;
+        
+        [SerializeField] private LayerMask jumpableGround;
 
         private float directionX = 0f;
         // [SerializeField] private = it shows in unity editor
@@ -15,6 +18,8 @@ public class PlayerMovement : MonoBehaviour
         // then this variable is accessible by every script
         [SerializeField] private float moveSpeed = 7f;
         [SerializeField] private float jumpForce = 14f;
+
+        private enum MovementState { idle, running, jumping, falling }
 
         // console log = Debug.Log("Hello world");
 
@@ -29,6 +34,7 @@ public class PlayerMovement : MonoBehaviour
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        collision = GetComponent<BoxCollider2D>();
         sprite = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
     }
@@ -40,7 +46,7 @@ public class PlayerMovement : MonoBehaviour
         directionX = Input.GetAxis("Horizontal");
         rb.velocity = new Vector2(directionX * moveSpeed, rb.velocity.y);
 
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") && IsGrounded())
         {
            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
         }
@@ -56,19 +62,37 @@ public class PlayerMovement : MonoBehaviour
         //     anim.SetBool("Running", true);
         // }
 
+        MovementState state;
+
         if (directionX > 0f)
         {
-            anim.SetBool("Running", true);
+            state = MovementState.running;
             sprite.flipX = false;
         }
         else if (directionX < 0f)
         {
-            anim.SetBool("Running", true);
+            state = MovementState.running;
             sprite.flipX = true;
         }
         else 
         {
-            anim.SetBool("Running", false);
+            state = MovementState.idle;
         }
+
+        if (rb.velocity.y > .1f) 
+        {
+            state = MovementState.jumping;
+        }
+        else if (rb.velocity.y < -.1f)
+        {
+            state = MovementState.falling;
+        }
+
+        anim.SetInteger("state", (int)state);
+    }
+
+    private bool IsGrounded() 
+    {
+       return Physics2D.BoxCast(collision.bounds.center, collision.bounds.size, 0f, Vector2.down, .1f, jumpableGround);
     }
 }
